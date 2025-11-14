@@ -1162,7 +1162,7 @@ def init(
 
 @app.command()
 def check():
-    """Check that all required tools are installed."""
+    """检查是否安装了所有必需的工具"""
     show_banner()
     console.print("[bold]Checking for installed tools...[/bold]\n")
 
