@@ -1,5 +1,5 @@
 ---
-description: Execute the implementation planning workflow using the plan template to generate design artifacts.
+description: 使用计划模板执行实施规划工作流程以生成设计制品。
 scripts:
   sh: scripts/bash/setup-plan.sh --json
   ps: scripts/powershell/setup-plan.ps1 -Json
@@ -8,80 +8,80 @@ agent_scripts:
   ps: scripts/powershell/update-agent-context.ps1 -AgentType __AGENT__
 ---
 
-## User Input
+## 用户输入
 
 ```text
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
+您**必须**在继续之前考虑用户输入（如果不为空）。
 
-## Outline
+## 概述
 
-1. **Setup**: Run `{SCRIPT}` from repo root and parse JSON for FEATURE_SPEC, IMPL_PLAN, SPECS_DIR, BRANCH. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **设置**：从仓库根目录运行`{SCRIPT}`并解析JSON以获取FEATURE_SPEC、IMPL_PLAN、SPECS_DIR、BRANCH。对于包含单引号的参数，如"I'm Groot"，使用转义语法：例如'I'\''m Groot'（或者可能的话使用双引号："I'm Groot"）。
 
-2. **Load context**: Read FEATURE_SPEC and `/memory/constitution.md`. Load IMPL_PLAN template (already copied).
+2. **加载上下文**：阅读FEATURE_SPEC和`/memory/constitution.md`。加载IMPL_PLAN模板（已复制）。
 
-3. **Execute plan workflow**: Follow the structure in IMPL_PLAN template to:
-   - Fill Technical Context (mark unknowns as "NEEDS CLARIFICATION")
-   - Fill Constitution Check section from constitution
-   - Evaluate gates (ERROR if violations unjustified)
-   - Phase 0: Generate research.md (resolve all NEEDS CLARIFICATION)
-   - Phase 1: Generate data-model.md, contracts/, quickstart.md
-   - Phase 1: Update agent context by running the agent script
-   - Re-evaluate Constitution Check post-design
+3. **执行计划工作流程**：按照IMPL_PLAN模板中的结构：
+   - 填写技术上下文（将未知标记为"需要澄清"）
+   - 从宪法填写宪法检查部分
+   - 评估门控（如果违规未经证明，则错误）
+   - 阶段0：生成research.md（解决所有需要澄清的问题）
+   - 阶段1：生成data-model.md、contracts/、quickstart.md
+   - 阶段1：通过运行代理脚本更新代理上下文
+   - 设计后重新评估宪法检查
 
-4. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path, and generated artifacts.
+4. **停止并报告**：命令在阶段2规划后结束。报告分支、IMPL_PLAN路径和生成的制品。
 
-## Phases
+## 阶段
 
-### Phase 0: Outline & Research
+### 阶段0：概述和研究
 
-1. **Extract unknowns from Technical Context** above:
-   - For each NEEDS CLARIFICATION → research task
-   - For each dependency → best practices task
-   - For each integration → patterns task
+1. **从上面的技术上下文中提取未知项**：
+   - 对于每个需要澄清的项 → 研究任务
+   - 对于每个依赖项 → 最佳实践任务
+   - 对于每个集成 → 模式任务
 
-2. **Generate and dispatch research agents**:
+2. **生成并派遣研究代理**：
 
    ```text
-   For each unknown in Technical Context:
-     Task: "Research {unknown} for {feature context}"
-   For each technology choice:
-     Task: "Find best practices for {tech} in {domain}"
+   对于技术上下文中的每个未知项：
+     任务："研究{功能上下文}中的{未知项}"
+   对于每个技术选择：
+     任务："查找{领域}中{技术}的最佳实践"
    ```
 
-3. **Consolidate findings** in `research.md` using format:
-   - Decision: [what was chosen]
-   - Rationale: [why chosen]
-   - Alternatives considered: [what else evaluated]
+3. **在`research.md`中整合发现**，使用格式：
+   - 决策：[选择了什么]
+   - 理由：[为什么选择]
+   - 考虑的替代方案：[评估了什么其他选项]
 
-**Output**: research.md with all NEEDS CLARIFICATION resolved
+**输出**：research.md，所有需要澄清的问题都已解决
 
-### Phase 1: Design & Contracts
+### 阶段1：设计和合同
 
-**Prerequisites:** `research.md` complete
+**先决条件：**`research.md`完成
 
-1. **Extract entities from feature spec** → `data-model.md`:
-   - Entity name, fields, relationships
-   - Validation rules from requirements
-   - State transitions if applicable
+1. **从功能规格中提取实体** → `data-model.md`：
+   - 实体名称、字段、关系
+   - 来自需求的验证规则
+   - 如果适用，状态转换
 
-2. **Generate API contracts** from functional requirements:
-   - For each user action → endpoint
-   - Use standard REST/GraphQL patterns
-   - Output OpenAPI/GraphQL schema to `/contracts/`
+2. **从功能需求生成API合同**：
+   - 对于每个用户操作 → 端点
+   - 使用标准REST/GraphQL模式
+   - 输出OpenAPI/GraphQL模式到`/contracts/`
 
-3. **Agent context update**:
-   - Run `{AGENT_SCRIPT}`
-   - These scripts detect which AI agent is in use
-   - Update the appropriate agent-specific context file
-   - Add only new technology from current plan
-   - Preserve manual additions between markers
+3. **代理上下文更新**：
+   - 运行`{AGENT_SCRIPT}`
+   - 这些脚本检测正在使用的AI代理
+   - 更新相应的代理特定上下文文件
+   - 仅添加当前计划中的新技术
+   - 在标记之间保留手动添加的内容
 
-**Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
+**输出**：data-model.md、/contracts/*、quickstart.md、代理特定文件
 
-## Key rules
+## 关键规则
 
-- Use absolute paths
-- ERROR on gate failures or unresolved clarifications
+- 使用绝对路径
+- 门控失败或未解决的澄清时出错
