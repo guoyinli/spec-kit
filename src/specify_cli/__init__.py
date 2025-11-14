@@ -566,7 +566,7 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, scri
 
     if verbose:
         console.print("[cyan]Fetching latest release information...[/cyan]")
-    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/dev_v1"
+    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
 
     try:
         response = client.get(
