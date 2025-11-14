@@ -2,7 +2,7 @@
 
 set -e
 
-# Parse command line arguments
+# 解析命令行参数
 JSON_MODE=false
 ARGS=()
 
@@ -23,20 +23,20 @@ for arg in "$@"; do
     esac
 done
 
-# Get script directory and load common functions
+# 获取脚本目录并加载通用函数
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Get all paths and variables from common functions
+# 从通用函数获取所有路径和变量
 eval $(get_feature_paths)
 
-# Check if we're on a proper feature branch (only for git repos)
+# 检查我们是否在正确的功能分支上（仅适用于git仓库）
 check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 
-# Ensure the feature directory exists
+# 确保功能目录存在
 mkdir -p "$FEATURE_DIR"
 
-# Copy plan template if it exists
+# 如果存在，复制计划模板
 TEMPLATE="$REPO_ROOT/.specify/templates/plan-template.md"
 if [[ -f "$TEMPLATE" ]]; then
     cp "$TEMPLATE" "$IMPL_PLAN"
@@ -47,7 +47,7 @@ else
     touch "$IMPL_PLAN"
 fi
 
-# Output results
+# 输出结果
 if $JSON_MODE; then
     printf '{"FEATURE_SPEC":"%s","IMPL_PLAN":"%s","SPECS_DIR":"%s","BRANCH":"%s","HAS_GIT":"%s"}\n' \
         "$FEATURE_SPEC" "$IMPL_PLAN" "$FEATURE_DIR" "$CURRENT_BRANCH" "$HAS_GIT"

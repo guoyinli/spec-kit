@@ -67,7 +67,7 @@ if [ -z "$FEATURE_DESCRIPTION" ]; then
     exit 1
 fi
 
-# Function to find the repository root by searching for existing project markers
+# 通过搜索现有项目标记查找仓库根目录的函数
 find_repo_root() {
     local dir="$1"
     while [ "$dir" != "/" ]; do
@@ -80,26 +80,26 @@ find_repo_root() {
     return 1
 }
 
-# Function to check existing branches (local and remote) and return next available number
+# 检查现有分支(本地和远程)并返回下一个可用编号的函数
 check_existing_branches() {
     local short_name="$1"
     
-    # Fetch all remotes to get latest branch info (suppress errors if no remotes)
+    # 获取所有远程分支以获取最新分支信息(如果没有远程分支则抑制错误)
     git fetch --all --prune 2>/dev/null || true
     
-    # Find all branches matching the pattern using git ls-remote (more reliable)
+    # 使用git ls-remote查找所有匹配模式的分支(更可靠)
     local remote_branches=$(git ls-remote --heads origin 2>/dev/null | grep -E "refs/heads/[0-9]+-${short_name}$" | sed 's/.*\/\([0-9]*\)-.*/\1/' | sort -n)
     
-    # Also check local branches
+    # 同时检查本地分支
     local local_branches=$(git branch 2>/dev/null | grep -E "^[* ]*[0-9]+-${short_name}$" | sed 's/^[* ]*//' | sed 's/-.*//' | sort -n)
     
-    # Check specs directory as well
+    # 同时检查specs目录
     local spec_dirs=""
     if [ -d "$SPECS_DIR" ]; then
         spec_dirs=$(find "$SPECS_DIR" -maxdepth 1 -type d -name "[0-9]*-${short_name}" 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/-.*//' | sort -n)
     fi
     
-    # Combine all sources and get the highest number
+    # 合并所有来源并获取最高编号
     local max_num=0
     for num in $remote_branches $local_branches $spec_dirs; do
         if [ "$num" -gt "$max_num" ]; then
@@ -107,13 +107,13 @@ check_existing_branches() {
         fi
     done
     
-    # Return next number
+    # 返回下一个编号
     echo $((max_num + 1))
 }
 
-# Resolve repository root. Prefer git information when available, but fall back
-# to searching for repository markers so the workflow still functions in repositories that
-# were initialised with --no-git.
+# 解析仓库根目录。优先使用git信息(如果可用)，但回退
+# 到搜索仓库标记，以便工作流在使用--no-git
+# 初始化的仓库中仍然有效。
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if git rev-parse --show-toplevel >/dev/null 2>&1; then
@@ -133,34 +133,34 @@ cd "$REPO_ROOT"
 SPECS_DIR="$REPO_ROOT/specs"
 mkdir -p "$SPECS_DIR"
 
-# Function to generate branch name with stop word filtering and length filtering
+# 生成带有停用词过滤和长度过滤的分支名称的函数
 generate_branch_name() {
     local description="$1"
     
-    # Common stop words to filter out
+    # 要过滤掉的常见停用词
     local stop_words="^(i|a|an|the|to|for|of|in|on|at|by|with|from|is|are|was|were|be|been|being|have|has|had|do|does|did|will|would|should|could|can|may|might|must|shall|this|that|these|those|my|your|our|their|want|need|add|get|set)$"
     
-    # Convert to lowercase and split into words
+    # 转换为小写并分割成单词
     local clean_name=$(echo "$description" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/ /g')
     
-    # Filter words: remove stop words and words shorter than 3 chars (unless they're uppercase acronyms in original)
+    # 过滤单词：删除停用词和短于3个字符的单词(除非它们在原文中是大写缩写词)
     local meaningful_words=()
     for word in $clean_name; do
-        # Skip empty words
+        # 跳过空单词
         [ -z "$word" ] && continue
         
-        # Keep words that are NOT stop words AND (length >= 3 OR are potential acronyms)
+        # 保留不是停用词且(长度>=3或可能是缩写词)的单词
         if ! echo "$word" | grep -qiE "$stop_words"; then
             if [ ${#word} -ge 3 ]; then
                 meaningful_words+=("$word")
             elif echo "$description" | grep -q "\b${word^^}\b"; then
-                # Keep short words if they appear as uppercase in original (likely acronyms)
+                # 如果短单词在原文中以大写形式出现(可能是缩写词)，则保留
                 meaningful_words+=("$word")
             fi
         fi
     done
     
-    # If we have meaningful words, use first 3-4 of them
+    # 如果我们有有意义的单词，使用前3-4个
     if [ ${#meaningful_words[@]} -gt 0 ]; then
         local max_words=3
         if [ ${#meaningful_words[@]} -eq 4 ]; then max_words=4; fi
@@ -175,27 +175,27 @@ generate_branch_name() {
         done
         echo "$result"
     else
-        # Fallback to original logic if no meaningful words found
+        # 如果没有找到有意义的单词，回退到原始逻辑
         echo "$description" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//' | sed 's/-$//' | tr '-' '\n' | grep -v '^$' | head -3 | tr '\n' '-' | sed 's/-$//'
     fi
 }
 
-# Generate branch name
+# 生成分支名称
 if [ -n "$SHORT_NAME" ]; then
-    # Use provided short name, just clean it up
+    # 使用提供的短名称，只需清理一下
     BRANCH_SUFFIX=$(echo "$SHORT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//' | sed 's/-$//')
 else
-    # Generate from description with smart filtering
+    # 使用智能过滤从描述生成
     BRANCH_SUFFIX=$(generate_branch_name "$FEATURE_DESCRIPTION")
 fi
 
-# Determine branch number
+# 确定分支编号
 if [ -z "$BRANCH_NUMBER" ]; then
     if [ "$HAS_GIT" = true ]; then
-        # Check existing branches on remotes
+        # 检查远程分支上的现有分支
         BRANCH_NUMBER=$(check_existing_branches "$BRANCH_SUFFIX")
     else
-        # Fall back to local directory check
+        # 回退到本地目录检查
         HIGHEST=0
         if [ -d "$SPECS_DIR" ]; then
             for dir in "$SPECS_DIR"/*; do
@@ -213,17 +213,17 @@ fi
 FEATURE_NUM=$(printf "%03d" "$BRANCH_NUMBER")
 BRANCH_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
 
-# GitHub enforces a 244-byte limit on branch names
-# Validate and truncate if necessary
+# GitHub对分支名称强制执行244字节的限制
+# 如有必要，验证并截断
 MAX_BRANCH_LENGTH=244
 if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
-    # Calculate how much we need to trim from suffix
-    # Account for: feature number (3) + hyphen (1) = 4 chars
+    # 计算我们需要从后缀中修剪多少
+    # 考虑：功能编号(3) + 连字符(1) = 4个字符
     MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - 4))
     
-    # Truncate suffix at word boundary if possible
+    # 如果可能，在单词边界截断后缀
     TRUNCATED_SUFFIX=$(echo "$BRANCH_SUFFIX" | cut -c1-$MAX_SUFFIX_LENGTH)
-    # Remove trailing hyphen if truncation created one
+    # 如果截断创建了尾部连字符，则删除
     TRUNCATED_SUFFIX=$(echo "$TRUNCATED_SUFFIX" | sed 's/-$//')
     
     ORIGINAL_BRANCH_NAME="$BRANCH_NAME"
@@ -247,7 +247,7 @@ TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
 SPEC_FILE="$FEATURE_DIR/spec.md"
 if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$SPEC_FILE"; else touch "$SPEC_FILE"; fi
 
-# Set the SPECIFY_FEATURE environment variable for the current session
+# 为当前会话设置SPECIFY_FEATURE环境变量
 export SPECIFY_FEATURE="$BRANCH_NAME"
 
 if $JSON_MODE; then

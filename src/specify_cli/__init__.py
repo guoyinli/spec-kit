@@ -10,14 +10,14 @@
 # ]
 # ///
 """
-Specify CLI - Setup tool for Specify projects
+Specify CLI - Specify 项目的设置工具
 
-Usage:
+用法:
     uvx specify-cli.py init <project-name>
     uvx specify-cli.py init .
     uvx specify-cli.py init --here
 
-Or install globally:
+或全局安装:
     uv tool install --from specify-cli.py specify-cli
     specify init <project-name>
     specify init .
@@ -47,7 +47,7 @@ from rich.table import Table
 from rich.tree import Tree
 from typer.core import TyperGroup
 
-# For cross-platform keyboard input
+# 跨平台键盘输入支持
 import readchar
 import ssl
 import truststore
@@ -56,20 +56,20 @@ ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 client = httpx.Client(verify=ssl_context)
 
 def _github_token(cli_token: str | None = None) -> str | None:
-    """Return sanitized GitHub token (cli arg takes precedence) or None."""
+    """返回清理后的 GitHub token（命令行参数优先）或 None。"""
     return ((cli_token or os.getenv("GH_TOKEN") or os.getenv("GITHUB_TOKEN") or "").strip()) or None
 
 def _github_auth_headers(cli_token: str | None = None) -> dict:
-    """Return Authorization header dict only when a non-empty token exists."""
+    """仅在存在非空 token 时返回 Authorization 头部字典。"""
     token = _github_token(cli_token)
     return {"Authorization": f"Bearer {token}"} if token else {}
 
-# Agent configuration with name, folder, install URL, and CLI tool requirement
+# AI 代理配置，包含名称、文件夹、安装 URL 和 CLI 工具要求
 AGENT_CONFIG = {
     "copilot": {
         "name": "GitHub Copilot",
         "folder": ".github/",
-        "install_url": None,  # IDE-based, no CLI check needed
+        "install_url": None,  # 基于 IDE，无需 CLI 检查
         "requires_cli": False,
     },
     "claude": {
@@ -87,7 +87,7 @@ AGENT_CONFIG = {
     "cursor-agent": {
         "name": "Cursor",
         "folder": ".cursor/",
-        "install_url": None,  # IDE-based
+        "install_url": None,  # 基于 IDE
         "requires_cli": False,
     },
     "qwen": {
@@ -111,13 +111,13 @@ AGENT_CONFIG = {
     "windsurf": {
         "name": "Windsurf",
         "folder": ".windsurf/",
-        "install_url": None,  # IDE-based
+        "install_url": None,  # 基于 IDE
         "requires_cli": False,
     },
     "kilocode": {
         "name": "Kilo Code",
         "folder": ".kilocode/",
-        "install_url": None,  # IDE-based
+        "install_url": None,  # 基于 IDE
         "requires_cli": False,
     },
     "auggie": {
@@ -135,7 +135,7 @@ AGENT_CONFIG = {
     "roo": {
         "name": "Roo Code",
         "folder": ".roo/",
-        "install_url": None,  # IDE-based
+        "install_url": None,  # 基于 IDE
         "requires_cli": False,
     },
     "q": {
@@ -167,14 +167,14 @@ BANNER = """
 
 TAGLINE = "GitHub Spec Kit - Spec-Driven Development Toolkit"
 class StepTracker:
-    """Track and render hierarchical steps without emojis, similar to Claude Code tree output.
-    Supports live auto-refresh via an attached refresh callback.
+    """跟踪和渲染分层步骤（无表情符号），类似于 Claude Code 树状输出。
+    支持通过附加的刷新回调进行实时自动刷新。
     """
     def __init__(self, title: str):
         self.title = title
-        self.steps = []  # list of dicts: {key, label, status, detail}
+        self.steps = []  # 字典列表：{key, label, status, detail}
         self.status_order = {"pending": 0, "running": 1, "done": 2, "error": 3, "skipped": 4}
-        self._refresh_cb = None  # callable to trigger UI refresh
+        self._refresh_cb = None  # 用于触发 UI 刷新的可调用对象
 
     def attach_refresh(self, cb):
         self._refresh_cb = cb
@@ -457,14 +457,14 @@ def is_git_repo(path: Path = None) -> bool:
         return False
 
 def init_git_repo(project_path: Path, quiet: bool = False) -> Tuple[bool, Optional[str]]:
-    """Initialize a git repository in the specified path.
+    """在指定路径初始化 git 仓库。
     
-    Args:
-        project_path: Path to initialize git repository in
-        quiet: if True suppress console output (tracker handles status)
+    参数:
+        project_path: 要初始化 git 仓库的路径
+        quiet: 如果为 True 则抑制控制台输出（跟踪器处理状态）
     
-    Returns:
-        Tuple of (success: bool, error_message: Optional[str])
+    返回:
+        (成功: bool, 错误消息: Optional[str]) 的元组
     """
     try:
         original_cwd = Path.cwd()
@@ -492,7 +492,7 @@ def init_git_repo(project_path: Path, quiet: bool = False) -> Tuple[bool, Option
         os.chdir(original_cwd)
 
 def handle_vscode_settings(sub_item, dest_file, rel_path, verbose=False, tracker=None) -> None:
-    """Handle merging or copying of .vscode/settings.json files."""
+    """处理 .vscode/settings.json 文件的合并或复制。"""
     def log(message, color="green"):
         if verbose and not tracker:
             console.print(f"[{color}]{message}[/] {rel_path}")
@@ -516,38 +516,38 @@ def handle_vscode_settings(sub_item, dest_file, rel_path, verbose=False, tracker
         shutil.copy2(sub_item, dest_file)
 
 def merge_json_files(existing_path: Path, new_content: dict, verbose: bool = False) -> dict:
-    """Merge new JSON content into existing JSON file.
+    """将新的 JSON 内容合并到现有 JSON 文件中。
 
-    Performs a deep merge where:
-    - New keys are added
-    - Existing keys are preserved unless overwritten by new content
-    - Nested dictionaries are merged recursively
-    - Lists and other values are replaced (not merged)
+    执行深度合并：
+    - 添加新键
+    - 保留现有键，除非被新内容覆盖
+    - 嵌套字典递归合并
+    - 列表和其他值被替换（不合并）
 
-    Args:
-        existing_path: Path to existing JSON file
-        new_content: New JSON content to merge in
-        verbose: Whether to print merge details
+    参数：
+        existing_path: 现有 JSON 文件的路径
+        new_content: 要合并的新 JSON 内容
+        verbose: 是否打印合并详情
 
-    Returns:
-        Merged JSON content as dict
+    返回：
+        合并后的 JSON 内容（字典格式）
     """
     try:
         with open(existing_path, 'r', encoding='utf-8') as f:
             existing_content = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        # If file doesn't exist or is invalid, just use new content
+        # 如果文件不存在或无效，直接使用新内容
         return new_content
 
     def deep_merge(base: dict, update: dict) -> dict:
-        """Recursively merge update dict into base dict."""
+        """递归将更新字典合并到基础字典中。"""
         result = base.copy()
         for key, value in update.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                # Recursively merge nested dictionaries
+                # 递归合并嵌套字典
                 result[key] = deep_merge(result[key], value)
             else:
-                # Add new key or replace existing value
+                # 添加新键或替换现有值
                 result[key] = value
         return result
 
@@ -669,8 +669,8 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, scri
     return zip_path, metadata
 
 def download_and_extract_template(project_path: Path, ai_assistant: str, script_type: str, is_current_dir: bool = False, *, verbose: bool = True, tracker: StepTracker | None = None, client: httpx.Client = None, debug: bool = False, github_token: str = None) -> Path:
-    """Download the latest release and extract it to create a new project.
-    Returns project_path. Uses tracker if provided (with keys: fetch, download, extract, cleanup)
+    """下载最新版本并解压以创建新项目。
+    返回 project_path。如果提供了 tracker 则使用它（键值：fetch, download, extract, cleanup）
     """
     current_dir = Path.cwd()
 
@@ -749,7 +749,7 @@ def download_and_extract_template(project_path: Path, ai_assistant: str, script_
                                         rel_path = sub_item.relative_to(item)
                                         dest_file = dest_path / rel_path
                                         dest_file.parent.mkdir(parents=True, exist_ok=True)
-                                        # Special handling for .vscode/settings.json - merge instead of overwrite
+                                        # .vscode/settings.json 的特殊处理 - 合并而不是覆盖
                                         if dest_file.name == "settings.json" and dest_file.parent.name == ".vscode":
                                             handle_vscode_settings(sub_item, dest_file, rel_path, verbose, tracker)
                                         else:
@@ -819,9 +819,9 @@ def download_and_extract_template(project_path: Path, ai_assistant: str, script_
 
 
 def ensure_executable_scripts(project_path: Path, tracker: StepTracker | None = None) -> None:
-    """Ensure POSIX .sh scripts under .specify/scripts (recursively) have execute bits (no-op on Windows)."""
+    """确保 .specify/scripts 下的 POSIX .sh 脚本（递归）具有执行权限（Windows 上无操作）。"""
     if os.name == "nt":
-        return  # Windows: skip silently
+        return  # Windows: 静默跳过
     scripts_root = project_path / ".specify" / "scripts"
     if not scripts_root.is_dir():
         return
@@ -876,28 +876,28 @@ def init(
     github_token: str = typer.Option(None, "--github-token", help="GitHub token to use for API requests (or set GH_TOKEN or GITHUB_TOKEN environment variable)"),
 ):
     """
-    Initialize a new Specify project from the latest template.
+    从最新模板初始化一个新的 Specify 项目。
     
-    This command will:
-    1. Check that required tools are installed (git is optional)
-    2. Let you choose your AI assistant
-    3. Download the appropriate template from GitHub
-    4. Extract the template to a new project directory or current directory
-    5. Initialize a fresh git repository (if not --no-git and no existing repo)
-    6. Optionally set up AI assistant commands
+    此命令将：
+    1. 检查所需工具是否已安装（git 是可选的）
+    2. 让您选择 AI 助手
+    3. 从 GitHub 下载相应的模板
+    4. 将模板提取到新项目目录或当前目录
+    5. 初始化一个新的 git 仓库（如果不使用 --no-git 且没有现有仓库）
+    6. 可选设置 AI 助手命令
     
-    Examples:
+    示例：
         specify init my-project
         specify init my-project --ai claude
         specify init my-project --ai copilot --no-git
         specify init --ignore-agent-tools my-project
-        specify init . --ai claude         # Initialize in current directory
-        specify init .                     # Initialize in current directory (interactive AI selection)
-        specify init --here --ai claude    # Alternative syntax for current directory
+        specify init . --ai claude         # 在当前目录初始化
+        specify init .                     # 在当前目录初始化（交互式 AI 选择）
+        specify init --here --ai claude    # 当前目录的替代语法
         specify init --here --ai codex
         specify init --here --ai codebuddy
         specify init --here
-        specify init --here --force  # Skip confirmation when current directory not empty
+        specify init --here --force  # 当前目录不为空时跳过确认
     """
 
     show_banner()
